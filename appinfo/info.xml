@@ -3,7 +3,7 @@
 	<id>user_hiorg</id>
 	<name>Hiorg Server</name>
 	<description>Integration of Hiorg-Server into Nextcloud inclusive user backend.</description>
-	<version>0.1</version>
+	<version>1.0.0</version>
 	<licence>AGPL</licence>
 	<author>Thomas Krause [forked from: Klaus Herberth]</author>
 	<types>
