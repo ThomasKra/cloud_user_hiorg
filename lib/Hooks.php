@@ -1,7 +1,7 @@
 <?php
 
 /**
- * ownCloud -user_hiorg
+ * NextCloud -user_hiorg
  *
  * @author Klaus Herberth
  * @copyright 2015 Klaus Herberth <klaus@herberth.eu>
@@ -20,20 +20,21 @@
  * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-namespace OCA\User_Hiorg;
+namespace OCA\user_hiorg;
 
-class Hooks
-{
-	public static function logout()
-	{
-		$token = \OC::$server->getSession()->get('user_hiorg_token');
+class Hooks {
 
-		if (isset($token)) {
-			$url = \OCA\User_Hiorg\HIORG::SSOURL . "?logout=1&token=$token";
+   public static function logout() {
+      $token = \OC::$server->getSession ()->get ( 'user_hiorg_token' );
 
-			file_get_contents($url);
+      if (isset ( $token )) {
+         $url = \OCA\user_hiorg\HIORG::SSOURL . "?logout=1&token=$token";
 
-			\OC::$server->getSession()->remove('user_hiorg_token');
-		}
-	}
+         file_get_contents ( $url );
+
+         \OC::$server->getSession ()->remove ( 'user_hiorg_token' );
+      }
+   }
 }
+
+?>

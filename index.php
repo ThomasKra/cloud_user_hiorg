@@ -1,10 +1,11 @@
 <?php
 
 /**
- * ownCloud -user_hiorg
+ * NextCloud -user_hiorg
  *
- * @author Klaus Herberth
+ * @author Klaus Herberth, Thomas Krause
  * @copyright 2015 Klaus Herberth <klaus@herberth.eu>
+ * @copyright 2017 Thomas Krause <tom@krause-micro.de>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE

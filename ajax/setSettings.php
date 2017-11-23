@@ -1,9 +1,10 @@
 <?php
 /**
- * ownCloud -user_hiorg
+ * NextCloud -user_hiorg
  *
- * @author Klaus Herberth
+ * @author Klaus Herberth, Thomas Krause
  * @copyright 2015 Klaus Herberth <klaus@herberth.eu>
+ * @copyright 2017 Thomas Krause <tom@krause-micro.de>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
@@ -23,6 +24,32 @@
 OCP\User::checkAdminUser();
 OCP\JSON::callCheck();
 
+/*
+Store HiOrg ov
+*/
 OCP\Config::setAppValue ( 'user_hiorg', 'ov', $_POST['ov'] );
+
+/*
+Store quota for users
+*/
+OCP\Config::setAppValue ( 'user_hiorg', 'quota', $_POST['quota'] );
+/* 
+Store group_id_0 as basic group for all HiOrg Users
+*/
+$num = strval(0);
+$group_str = "group_id_".$num;
+
+OCP\Config::setAppValue('user_hiorg',$group_str, $_POST[$group_str]);
+
+/*
+Store all other groups
+*/
+for($i = 0; $i < 11; $i++)
+{
+ $num = strval(2**$i);
+ $group_str = "group_id_".$num;
+
+ OCP\Config::setAppValue('user_hiorg',$group_str, $_POST[$group_str]);
+}
 
 echo 'true';

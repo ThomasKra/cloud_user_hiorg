@@ -1,10 +1,11 @@
 <?php
 
 /**
- * ownCloud -user_hiorg
+ * NextCloud -user_hiorg
  *
- * @author Klaus Herberth
+ * @author Klaus Herberth, Thomas Krause
  * @copyright 2015 Klaus Herberth <klaus@herberth.eu>
+	* @copyright 2017 Thomas Krause <tom@krause-micro.de>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
@@ -28,6 +29,20 @@ OCP\Util::addScript( 'user_hiorg', 'admin' );
 $tmpl = new OCP\Template( 'user_hiorg', 'settings');
 
 $tmpl->assign('ov', OCP\Config::getAppValue ( 'user_hiorg', 'ov' ));
+
+
+$groupManager = \OC::$server->getGroupManager();
+$groups = $groupManager->search('');
+$group_array[''] = "[keine]";
+
+foreach($groups as $group)
+{
+        $group_array[$group->getGID()] = $group->getGID();
+}
+
+$tmpl->assign('groups', $group_array);
+
+$tmpl->assign('quota', OCP\Config::getAppValue('user_hiorg', 'quota'));
 
 return $tmpl->fetchPage();
 ?>
