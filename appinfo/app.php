@@ -5,7 +5,7 @@
  *
  * @author Klaus Herberth, Thomas Krause
  * @copyright 2015 Klaus Herberth <klaus@herberth.eu>
-	* @copyright 2017 Thomas Krause <tom@krause-micro.de>
+ * @copyright 2017 Thomas Krause <tom@krause-micro.de>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
@@ -23,12 +23,13 @@
  */
 
 
-require_once OC_App::getAppPath('user_hiorg').'/lib/hiorg.php';
-require_once OC_App::getAppPath('user_hiorg').'/lib/user_hiorg.php';
+require_once __DIR__ .'/../lib/hiorg.php';
+require_once __DIR__ .'/../lib/user_hiorg.php';
+require_once __DIR__ .'/../lib/Hooks.php';
 
 OCP\Util::connectHook('OC_User', 'logout', '\OCA\user_hiorg\Hooks', 'logout');
 
-$userBackend = new \OCA\user_hiorg\User_HiOrg();
+$userBackend = new \OCA\user_hiorg\User_HiOrg($config = \OC::$server->getConfig());
 
 $userBackend->registerBackends(\OC::$server->getUserManager()->getBackends());
 
@@ -39,10 +40,10 @@ $userManager->registerBackend($userBackend);
 
 OCP\App::registerAdmin( 'user_hiorg', 'settings' );
 
-OCP\App::addNavigationEntry( array(
+\OC::$server->getNavigationManager()->add( array(
 	'id' => 'user_hiorg',
 	'order' => 74,
-	'href' => OCP\Util::linkTo( 'user_hiorg', 'index.php' ),
-	'icon' => OCP\Util::imagePath( 'user_hiorg', 'hiorg-icon.png' ),
+	'href' => \OC::$server->getURLGenerator()->linkTo( 'user_hiorg', 'index.php' ),
+	'icon' => \OC::$server->getURLGenerator()->imagePath( 'user_hiorg', 'hiorg-icon.png' ),
 	'name' => 'HiOrg Server'
 ));

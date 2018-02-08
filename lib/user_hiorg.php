@@ -26,6 +26,7 @@ namespace OCA\user_hiorg;
 
 use OCP\IUserBackend;
 use OCP\UserInterface;
+use OCP\IConfig;
 
 /**
  * This class implements a custom user backend which authenticates against @link.
@@ -43,6 +44,12 @@ class User_HiOrg implements IUserBackend,UserInterface{
    /** @var IUserManager */
    protected $userManager;
 
+   /** @var IConfig */
+   protected $config;
+
+   /** @var ILogger */
+   protected $logger;
+
    private $_hiorg_group = null;
 
 
@@ -50,14 +57,17 @@ class User_HiOrg implements IUserBackend,UserInterface{
    const URL = 'https://www.hiorg-server.de/';
    const SSOURL = 'https://www.hiorg-server.de/logmein.php';
 
-   public function __construct() {
+   public function __construct(IConfig $config) {
+      $this->config = $config;
+
+      $this->logger = \OC::$server->getLogger();
       $this->_realBackend = new \OC\User\Database ();
 
       $this->userManager = \OC::$server->getUserManager();
 
       $this->groupManager = \OC::$server->getGroupManager();
 
-      $hiorg_group_id = \OCP\Config::getAppValue('user_hiorg', "group_id_0", -1);
+      $hiorg_group_id = $this->config->getAppValue('user_hiorg', "group_id_0", -1);
 
       if($this->groupManager->groupExists($hiorg_group_id))
       {
@@ -71,7 +81,7 @@ class User_HiOrg implements IUserBackend,UserInterface{
          $num = strval(2**$i);
          $group_str = "group_id_".$num;
 
-         $this->group_id[$num] = \OCP\Config::getAppValue('user_hiorg', $group_str, 0);
+         $this->group_id[$num] = $this->config->getAppValue('user_hiorg', $group_str, 0);
       }
 
    }
@@ -92,11 +102,11 @@ class User_HiOrg implements IUserBackend,UserInterface{
 	 * @return boolean
 	 *
 	 * Returns the supported actions as int to be
-	 * compared with \OC_User_Backend::CREATE_USER etc.
+	 * compared with \OC\User\Backend::CREATE_USER etc.
 	 * @since 4.5.0
 	 */
    public function implementsActions($actions) {
-      return (bool)((\OC_User_Backend::CHECK_PASSWORD | \OC_User_Backend::GET_DISPLAYNAME | \OC_User_Backend::CREATE_USER)
+      return (bool)((\OC\User\Backend::CHECK_PASSWORD | \OC\User\Backend::GET_DISPLAYNAME | \OC\User\Backend::CREATE_USER)
                     & $actions);
    }
    /**
@@ -134,7 +144,7 @@ class User_HiOrg implements IUserBackend,UserInterface{
       Check if user exists and try to authenticate against the normal backend
       */
       if ($this->userExists ( $username )) {
-         \OCP\Util::writeLog('user_hiorg', 'use real backend. User already exists', \OCP\Util::INFO );
+         $this->logger->info('use real backend. User already exists', array('app' => 'user_hiorg') );
 
          $ret = $this->_realBackend->checkPassword ( $username, $password );
          $user = $this->userManager->get($username);
@@ -143,21 +153,20 @@ class User_HiOrg implements IUserBackend,UserInterface{
          {
             if($this->_hiorg_group->inGroup($user))
             {
-               \OCP\Util::writeLog('user_hiorg', "User ($username) is member of HiOrg group -> authenticate against HiOrg-Server", \OCP\Util::INFO );
+               $this->logger->info("User ($username) is member of HiOrg group -> authenticate against HiOrg-Server", array('app' => 'user_hiorg') );
                $ret = false;
             }
          }
          else
          {
-            \OCP\Util::writeLog('user_hiorg', "HiOrg group not assigned!", \OCP\Util::INFO );
+            $this->logger->info("HiOrg group not assigned!", array('app' => 'user_hiorg') );
          }
 
-         
 
          if ($ret !== false)
             return $ret;
 
-         \OCP\Util::writeLog('user_hiorg', 'real backend failed.', \OCP\Util::INFO );
+         $this->logger->info("real backend failed", array('app' => 'user_hiorg') );
       }
 
       /*
@@ -174,7 +183,7 @@ class User_HiOrg implements IUserBackend,UserInterface{
          'user_id' 
       );
       $reqParam = http_build_query ( array (
-         'ov' => \OCP\Config::getAppValue ( 'user_hiorg', 'ov' ),
+         'ov' => $this->config->getAppValue ( 'user_hiorg', 'ov' ),
          'weiter' => self::SSOURL,
          'getuserinfo' => implode ( ',', $reqUserinfo ) 
       ) );
@@ -193,16 +202,15 @@ class User_HiOrg implements IUserBackend,UserInterface{
 
       $result = file_get_contents ( self::SSOURL . '?' . $reqParam, false, $context );
 
-      if (mb_substr ( $result, 0, 2 ) != 'OK') {
-         \OCP\Util::writeLog('user_hiorg', 'Wrong password.', \OCP\Util::INFO );
-
+      if (mb_substr ( $result, 0, 2 ) !== 'OK') {
+         $this->logger->info('Wrong password.', array('app' => 'user_hiorg') );
          return false;
       }
 
       $token = null;
       foreach ( $http_response_header as $header ) {
          if (preg_match ( '/^([^:]+): *(.*)/', $header, $output )) {
-            if ($output [1] == 'Location') {
+            if ($output [1] === 'Location') {
                parse_str ( parse_url ( $output [2], PHP_URL_QUERY ), $query );
 
                if (isset ( $query ['token'] ) && preg_match ( '/[0-9a-z_\-]+/i', $query ['token'] )) {
@@ -213,17 +221,15 @@ class User_HiOrg implements IUserBackend,UserInterface{
          }
       }
 
-      if ($token == null) {
-         \OCP\Util::writeLog('user_hiorg', 'No token provided', OC_Log::WARN );
-
+      if ($token === null) {
+         $this->logger->warning('No token provided', array('app' => 'user_hiorg') );
          return false;
       }
 
       $userinfo = unserialize ( base64_decode ( mb_substr ( $result, 3 ) ) );
 
-      if ($userinfo ['ov'] !== \OCP\Config::getAppValue ( 'user_hiorg', 'ov' )) {
-         \OCP\Util::writeLog('user_hiorg', 'Wrong ov', OC_Log::WARN );
-
+      if ($userinfo ['ov'] !== $this->config->getAppValue ( 'user_hiorg', 'ov' )) {
+         $this->logger->warning('Wrong ov', array('app' => 'user_hiorg') );
          return false;
       }
 
@@ -231,11 +237,9 @@ class User_HiOrg implements IUserBackend,UserInterface{
 
       if (! $this->userExists ( $username )) {
          if ($this->_realBackend->createUser ( $username, $password )) {
-            \OCP\Util::writeLog('user_hiorg', "New user ($username) created.", \OCP\Util::INFO );
-            
+            $this->logger->info("New user ($username) created.", array('app' => 'user_hiorg') );
 
             $user = $this->userManager->get($username);
-            
             $accountManager = new \OC\Accounts\AccountManager (                 \OC::$server->getDatabaseConnection(),
                                                          \OC::$server->getEventDispatcher(),
                                                                \OC::$server->getJobList()
@@ -256,15 +260,15 @@ class User_HiOrg implements IUserBackend,UserInterface{
 
       $user->setEmailAddress($email);
 
-      \OCP\Util::writeLog('user_hiorg', "User ($username) display name set to ($display_name).", \OCP\Util::INFO );
+      $this->logger->info("User ($username) display name set to ($display_name).", array('app' => 'user_hiorg') );
 
-      \OCP\Util::writeLog('user_hiorg', "User ($username) email set to ($email).", \OCP\Util::INFO );
+      $this->logger->info("User ($username) email set to ($email).", array('app' => 'user_hiorg') );
 
             $this->_hiorg_group->addUser($user);
-            $user->setQuota(\OCP\Config::getAppValue('user_hiorg', "quota", "0MB"));
+            $user->setQuota($this->config->getAppValue('user_hiorg', "quota", "0MB"));
 
          } else {
-            \OCP\Util::writeLog('user_hiorg', "Could not create user ($username).", OC_Log::WARN );
+            $this->logger->warning( "Could not create user ($username).", array('app' => 'user_hiorg') );
             return false;
          }
       }
@@ -272,37 +276,34 @@ class User_HiOrg implements IUserBackend,UserInterface{
       $user = $this->userManager->get($username);
 
 
-      
 
-
-
-      \OCP\Util::writeLog('user_hiorg', "User ($username) is member of groups (".$userinfo['gruppe'].").", \OCP\Util::INFO );
+      $this->logger->info("User ($username) is member of groups (".$userinfo['gruppe'].").", array('app' => 'user_hiorg') );
 
       for($i = 0; $i < 11; $i++)
       {
          $num = strval(2**$i);
 
-         \OCP\Util::writeLog('user_hiorg', "HiOrg-Group ($num) is assigned to (".strval($this->group_id[$num]).").", \OCP\Util::INFO );
+         $this->logger->info( "HiOrg-Group ($num) is assigned to (".strval($this->group_id[$num]).").", array('app' => 'user_hiorg') );
 
-         if($this->group_id[$num] != '')
+         if($this->group_id[$num] !== '')
          {
             if($this->groupManager->groupExists($this->group_id[$num]))
             {
                $group = $this->groupManager->get($this->group_id[$num]);
                if($userinfo['gruppe'] & 2**$i) /* 2^i */
                {
-                  /* 
+                  /*
               user has this HiOrg-Server group
               check if user is already a member or add user to group
               */
                   if(!$group->inGroup($user))
                   {
                      $group->addUser($user);
-                     \OCP\Util::writeLog('user_hiorg', "Added user ($username) to group (".strval($this->group_id[$num]).").", \OCP\Util::INFO );
+                     $this->logger->info("Added user ($username) to group (".strval($this->group_id[$num]).").", array('app' => 'user_hiorg') );
                   }
                   else
                   {
-                     \OCP\Util::writeLog('user_hiorg', "User ($username) is not in group (".strval($this->group_id[$num]).").", \OCP\Util::INFO );
+                     $this->logger->info("User ($username) is not in group (".strval($this->group_id[$num]).").", array('app' => 'user_hiorg') );
                   }
                }
                else
@@ -314,17 +315,17 @@ class User_HiOrg implements IUserBackend,UserInterface{
                   if($group->inGroup($user))
                   {
                      $group->removeUser($user);
-                     \OCP\Util::writeLog('user_hiorg', "Removed user ($username) from group (".$this->group_id[$num].").", \OCP\Util::INFO );
+                     $this->logger->info( "Removed user ($username) from group (".$this->group_id[$num].").",  array('app' => 'user_hiorg') );
                   }
                   else
                   {
-                     \OCP\Util::writeLog('user_hiorg', "User ($username) is not in group (".$this->group_id[$num].").", \OCP\Util::INFO );
+                     $this->logger->info( "User ($username) is not in group (".$this->group_id[$num].").",  array('app' => 'user_hiorg') );
                   }
                }
             }
             else
             {
-               \OCP\Util::writeLog('user_hiorg', "Group (".$this->group_id[$num].") does not exist!", \OCP\Util::WARNING );
+               $this->logger->warning( "Group (".$this->group_id[$num].") does not exist!",  array('app' => 'user_hiorg') );
             }
          }
       }
@@ -333,7 +334,7 @@ class User_HiOrg implements IUserBackend,UserInterface{
 
       \OC::$server->getSession ()->set ( 'user_hiorg_token', $token );
 
-      \OCP\Util::writeLog('user_hiorg', "Correct password for $username ($username).", \OCP\Util::INFO );
+      $this->logger->info( "Correct password for $username ($username).",  array('app' => 'user_hiorg') );
 
       return $username;
    }
@@ -342,7 +343,7 @@ class User_HiOrg implements IUserBackend,UserInterface{
    {
       if ($this->userExists ( $uid )) {
          if ($this->_realBackend->deleteUser ( $uid)) {
-            \OCP\Util::writeLog('user_hiorg', "User ($username) deleted.", \OCP\Util::INFO );
+            $this->logger->info( "User ($username) deleted.",  array('app' => 'user_hiorg') );
          }
       }
    }
@@ -352,7 +353,7 @@ class User_HiOrg implements IUserBackend,UserInterface{
    }
    
    public function createUser($uid, $password) {
-		 \OCP\Util::writeLog('user_hiorg', 'Use the hiorg webinterface to create users',3);
+		 $this->logger->error('Use the hiorg webinterface to create users', array('app' => 'user_hiorg') );
 		 return $this->_realBackend->createUser($uid, $password);   
 	}
    
@@ -363,3 +364,4 @@ class User_HiOrg implements IUserBackend,UserInterface{
 }
 
 ?>
+

@@ -26,9 +26,12 @@ OCP\User::checkAdminUser();
 
 OCP\Util::addScript( 'user_hiorg', 'admin' );
 
+$config = \OC::$server->getConfig();
+
+
 $tmpl = new OCP\Template( 'user_hiorg', 'settings');
 
-$tmpl->assign('ov', OCP\Config::getAppValue ( 'user_hiorg', 'ov' ));
+$tmpl->assign('ov', $config->getAppValue ( 'user_hiorg', 'ov' ));
 
 
 $groupManager = \OC::$server->getGroupManager();
@@ -42,7 +45,7 @@ foreach($groups as $group)
 
 $tmpl->assign('groups', $group_array);
 
-$tmpl->assign('quota', OCP\Config::getAppValue('user_hiorg', 'quota'));
+$tmpl->assign('quota', $config->getAppValue('user_hiorg', 'quota'));
 
 return $tmpl->fetchPage();
 ?>

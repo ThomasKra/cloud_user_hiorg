@@ -3,7 +3,7 @@
 	<id>user_hiorg</id>
 	<name>Hiorg Server</name>
 	<description>Integration of Hiorg-Server into Nextcloud inclusive user backend.</description>
-	<version>1.0.0</version>
+	<version>1.1.0</version>
 	<licence>AGPL</licence>
 	<author>Thomas Krause [forked from: Klaus Herberth]</author>
 	<types>
@@ -12,6 +12,6 @@
 		<!-- <session/> //-->
    </types>
 	<dependencies>
-		<nextcloud min-version="12" max-version="12" />
+		<nextcloud min-version="12" max-version="13" />
 	</dependencies>
 </info>
