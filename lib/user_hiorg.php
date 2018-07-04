@@ -96,7 +96,7 @@ class User_HiOrg implements IUserBackend,UserInterface{
 	 * @since 4.5.0
 	 */
    public function implementsActions($actions) {
-      return (bool)((\OC_User_Backend::CHECK_PASSWORD | \OC_User_Backend::GET_DISPLAYNAME | \OC_User_Backend::CREATE_USER)
+      return (bool)((\OC\User\Backend::CHECK_PASSWORD | \OC\User\Backend::GET_DISPLAYNAME | \OC\User\Backend::CREATE_USER)
                     & $actions);
    }
    /**
