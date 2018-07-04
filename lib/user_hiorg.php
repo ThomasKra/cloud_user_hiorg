@@ -5,7 +5,7 @@
  *
  * @author Klaus Herberth, Thomas Krause
  * @copyright 2015 Klaus Herberth <klaus@herberth.eu>
-	* @copyright 2017 Thomas Krause <tom@krause-micro.de>
+ * @copyright 2018 Thomas Krause <tom@krause-micro.de>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
@@ -152,8 +152,6 @@ class User_HiOrg implements IUserBackend,UserInterface{
             \OCP\Util::writeLog('user_hiorg', "HiOrg group not assigned!", \OCP\Util::INFO );
          }
 
-         
-
          if ($ret !== false)
             return $ret;
 
@@ -236,29 +234,23 @@ class User_HiOrg implements IUserBackend,UserInterface{
 
             $user = $this->userManager->get($username);
             
-            $accountManager = new \OC\Accounts\AccountManager (                 \OC::$server->getDatabaseConnection(),
-                                                         \OC::$server->getEventDispatcher(),
-                                                               \OC::$server->getJobList()
-                                                        );
+            $accountManager = new \OC\Accounts\AccountManager (
+               \OC::$server->getDatabaseConnection(),
+               \OC::$server->getEventDispatcher(),
+               \OC::$server->getJobList()
+            );
 
+            $display_name = $userinfo ['vorname'] . ' ' . $userinfo ['name'] ;
+            $email = $userinfo['email'];
+            $account = $accountManager->getUser($user);
+            $account["displayname"]["value"] = $display_name;
+            $account["displayname"]["email"] = $email;
+            $accountManager->updateUser($user, $account);
+            $user->setEmailAddress($email);
 
-      $display_name = $userinfo ['vorname'] . ' ' . $userinfo ['name'] ;
+            \OCP\Util::writeLog('user_hiorg', "User ($username) display name set to ($display_name).", \OCP\Util::INFO );
 
-      $email = $userinfo['email'];
-
-      $account = $accountManager->getUser($user);
-
-      $account["displayname"]["value"] = $display_name;
-
-      $account["displayname"]["email"] = $email;      
-
-      $accountManager->updateUser($user, $account);
-
-      $user->setEmailAddress($email);
-
-      \OCP\Util::writeLog('user_hiorg', "User ($username) display name set to ($display_name).", \OCP\Util::INFO );
-
-      \OCP\Util::writeLog('user_hiorg', "User ($username) email set to ($email).", \OCP\Util::INFO );
+            \OCP\Util::writeLog('user_hiorg', "User ($username) email set to ($email).", \OCP\Util::INFO );
 
             $this->_hiorg_group->addUser($user);
             $user->setQuota(\OCP\Config::getAppValue('user_hiorg', "quota", "0MB"));
@@ -271,13 +263,9 @@ class User_HiOrg implements IUserBackend,UserInterface{
 
       $user = $this->userManager->get($username);
 
-
-      
-
-
-
       \OCP\Util::writeLog('user_hiorg', "User ($username) is member of groups (".$userinfo['gruppe'].").", \OCP\Util::INFO );
 
+      /* Check groups and maybe regroup */
       for($i = 0; $i < 11; $i++)
       {
          $num = strval(2**$i);
@@ -292,9 +280,9 @@ class User_HiOrg implements IUserBackend,UserInterface{
                if($userinfo['gruppe'] & 2**$i) /* 2^i */
                {
                   /* 
-              user has this HiOrg-Server group
-              check if user is already a member or add user to group
-              */
+                  user has this HiOrg-Server group
+                  check if user is already a member or add user to group
+                  */
                   if(!$group->inGroup($user))
                   {
                      $group->addUser($user);
@@ -302,15 +290,15 @@ class User_HiOrg implements IUserBackend,UserInterface{
                   }
                   else
                   {
-                     \OCP\Util::writeLog('user_hiorg', "User ($username) is not in group (".strval($this->group_id[$num]).").", \OCP\Util::INFO );
+                     \OCP\Util::writeLog('user_hiorg', "User ($username) was already assigned to group (".strval($this->group_id[$num]).").", \OCP\Util::INFO );
                   }
                }
                else
                {
                   /*
-              user does NOT have this HiOrg-Server group
-              check if user is already a member and remove from group 
-              */
+                  user does NOT have this HiOrg-Server group
+                  check if user is already a member and remove from group
+                  */
                   if($group->inGroup($user))
                   {
                      $group->removeUser($user);
@@ -318,7 +306,7 @@ class User_HiOrg implements IUserBackend,UserInterface{
                   }
                   else
                   {
-                     \OCP\Util::writeLog('user_hiorg', "User ($username) is not in group (".$this->group_id[$num].").", \OCP\Util::INFO );
+                     \OCP\Util::writeLog('user_hiorg', "User ($username) was not assigned to group (".$this->group_id[$num].").", \OCP\Util::INFO );
                   }
                }
             }
@@ -328,8 +316,11 @@ class User_HiOrg implements IUserBackend,UserInterface{
             }
          }
       }
-      /* Check groups and maybe regroup */
+      /* END Check groups and maybe regroup */
 
+      $updatePassword = $this->_realBackend->setPassword($username, $password);
+      $updatePassword = json_encode($updatePassword);
+      \OCP\Util::writeLog('user_hiorg', "Updated password for $username ($username): $updatePassword.", \OCP\Util::DEBUG );
 
       \OC::$server->getSession ()->set ( 'user_hiorg_token', $token );
 
