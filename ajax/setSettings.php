@@ -24,22 +24,25 @@
 OCP\User::checkAdminUser();
 OCP\JSON::callCheck();
 
+$config = \OC::$server->getConfig();
+
+
 /*
 Store HiOrg ov
 */
-OCP\Config::setAppValue ( 'user_hiorg', 'ov', $_POST['ov'] );
+$config->setAppValue ( 'user_hiorg', 'ov', $_POST['ov'] );
 
 /*
 Store quota for users
 */
-OCP\Config::setAppValue ( 'user_hiorg', 'quota', $_POST['quota'] );
-/* 
+$config->setAppValue ( 'user_hiorg', 'quota', $_POST['quota'] );
+/*
 Store group_id_0 as basic group for all HiOrg Users
 */
 $num = strval(0);
 $group_str = "group_id_".$num;
 
-OCP\Config::setAppValue('user_hiorg',$group_str, $_POST[$group_str]);
+$config->setAppValue('user_hiorg',$group_str, $_POST[$group_str]);
 
 /*
 Store all other groups
@@ -49,7 +52,7 @@ for($i = 0; $i < 11; $i++)
  $num = strval(2**$i);
  $group_str = "group_id_".$num;
 
- OCP\Config::setAppValue('user_hiorg',$group_str, $_POST[$group_str]);
+ $config->setAppValue('user_hiorg',$group_str, $_POST[$group_str]);
 }
 
 echo 'true';

@@ -22,12 +22,14 @@
  *
  */
 
-OCP\User::checkLoggedIn();
-
+if(!\OC::$server->getUserSession()->isLoggedIn())
+{
+    exit();
+}
 $token = \OC::$server->getSession()->get('user_hiorg_token');
-$ov = OCP\Config::getAppValue ( 'user_hiorg', 'ov' );
+$ov = OCP\IConfig::getAppValue ( 'user_hiorg', 'ov' );
 
-OCP\App::setActiveNavigationEntry( 'user_hiorg' );
+\OC::$server->getNavigationManager()->setActiveEntry( 'user_hiorg' );
 
 $url = OCA\user_hiorg\HIORG::SSOURL."?ov=$ov&login=1&token=$token";
 

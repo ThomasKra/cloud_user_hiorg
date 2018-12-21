@@ -30,7 +30,7 @@
 				foreach($_['groups'] as $key => $group)
 				{
 				?>
-				<option value="<?php p($key); ?>" <?php if($key == \OC::$server->getConfig()->getAppValue('user_hiorg', $value_name, '')){p('selected="selected"');}?>><?php p($group); ?></option>
+				<option value="<?php p($key); ?>" <?php if($key === \OC::$server->getConfig()->getAppValue('user_hiorg', $value_name, '')){p('selected="selected"');}?>><?php p($group); ?></option>
 				<?php
 				}
 				?>
@@ -52,7 +52,7 @@
 			foreach($_['groups'] as $key => $group)
 			{
 				?>
-				<option value="<?php p($key); ?>" <?php if($key == \OC::$server->getConfig()->getAppValue('user_hiorg', $value_name, '')){p('selected="selected"');}?>><?php p($group); ?></option>
+				<option value="<?php p($key); ?>" <?php if($key === \OC::$server->getConfig()->getAppValue('user_hiorg', $value_name, '')){p('selected="selected"');}?>><?php p($group); ?></option>
 				<?php
 			}
 				?>

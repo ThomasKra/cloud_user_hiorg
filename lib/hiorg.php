@@ -22,9 +22,13 @@
  */
 
 namespace OCA\user_hiorg;
+$config = \OC::$server->getConfig();
+$logger = \OC::$server->getLogger();
 
 class HIORG {
    private static $userData = null;
+//   private $config = \OC::$server->getConfig();
+
 
    // How long should we try our cached username-uid?
    const TIMEOUT_CACHE = 86400; //24h
@@ -50,7 +54,7 @@ class HIORG {
     * @param  {string} $msg Message
     */
    public static function warn($msg) {
-      \OCP\Util::writeLog( 'user_hiorg', $msg, \OCP\Util::WARN );
+      $logger->warning($msg,  array('app' => 'user_hiorg') );
    }
 
    /**
@@ -59,7 +63,7 @@ class HIORG {
     * @param  {string} $msg Message
     */
    public static function info($msg) {
-      \OCP\Util::writeLog( 'user_hiorg', $msg, \OCP\Util::INFO );
+      $logger->info( 'user_hiorg', $msg,  array('app' => 'user_hiorg') );
    }
 
    /**
@@ -69,7 +73,7 @@ class HIORG {
     * @return boolean True if we are in our timeframe
     */
    public static function isInTime($uid) {
-      $lastLogin = \OCP\Config::getUserValue($uid, 'login', 'lastLogin', 0);
+      $lastLogin = $config->getUserValue($uid, 'login', 'lastLogin', 0);
 
       return $lastLogin + self::TIMEOUT_CACHE > time();
    }
@@ -168,7 +172,7 @@ class HIORG {
       // set email address
       if($userinfo['email'])
       {
-         \OCP\Config::setUserValue($uid, 'settings', 'email', $userinfo['email']);
+         $config->setUserValue($uid, 'settings', 'email', $userinfo['email']);
       }
       // update group memberships
       //self::syncGroupMemberships($uid, self::getUserData($username, $password));
@@ -194,7 +198,7 @@ class HIORG {
             'user_id'
       );
       $reqParam = http_build_query ( array (
-            'ov' => \OCP\Config::getAppValue ( 'user_hiorg', 'ov' ),
+            'ov' => $config->getAppValue ( 'user_hiorg', 'ov' ),
             'weiter' => self::SSOURL,
             'getuserinfo' => implode ( ',', $reqUserinfo )
       ) );
@@ -213,7 +217,7 @@ class HIORG {
 
       $result = file_get_contents ( self::SSOURL . '?' . $reqParam, false, $context );
 
-      if (mb_substr ( $result, 0, 2 ) != 'OK') {
+      if (mb_substr ( $result, 0, 2 ) !== 'OK') {
          self::info('Wrong HIORG password.');
 
          return false;
@@ -222,7 +226,7 @@ class HIORG {
       $token = null;
       foreach ( $http_response_header as $header ) {
          if (preg_match ( '/^([^:]+): *(.*)/', $header, $output )) {
-            if ($output [1] == 'Location') {
+            if ($output [1] === 'Location') {
                parse_str ( parse_url ( $output [2], PHP_URL_QUERY ), $query );
 
                if (isset ( $query ['token'] ) && preg_match ( '/[0-9a-z_\-]+/i', $query ['token'] )) {
@@ -233,7 +237,7 @@ class HIORG {
          }
       }
 
-      if ($token == null) {
+      if ($token === null) {
          self::warn('No token provided');
 
          return false;
@@ -244,7 +248,7 @@ class HIORG {
 
       $userinfo = unserialize ( base64_decode ( mb_substr ( $result, 3 ) ) );
 
-      if ($userinfo ['ov'] !== \OCP\Config::getAppValue ( 'user_hiorg', 'ov' )) {
+      if ($userinfo ['ov'] !== $config->getAppValue ( 'user_hiorg', 'ov' )) {
          self::warn('Wrong ov');
 
          return false;
@@ -277,7 +281,7 @@ class HIORG {
                   'content' => http_build_query ( array (
                         'username' => $username,
                         'passmd5' => md5($password),
-                        'ov' => \OCP\Config::getAppValue ( 'user_hiorg', 'ov' )
+                        'ov' => $config->getAppValue ( 'user_hiorg', 'ov' )
                   ), '', '&' )
             )
       ) );
