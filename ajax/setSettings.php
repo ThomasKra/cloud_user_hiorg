@@ -22,7 +22,6 @@
  */
 
 OCP\User::checkAdminUser();
-OCP\JSON::callCheck();
 
 $config = \OC::$server->getConfig();
 
